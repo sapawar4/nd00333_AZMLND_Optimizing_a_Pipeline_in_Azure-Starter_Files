@@ -1,3 +1,4 @@
+
 from sklearn.linear_model import LogisticRegression
 import argparse
 import os
@@ -9,18 +10,18 @@ from sklearn.preprocessing import OneHotEncoder
 import pandas as pd
 from azureml.core.run import Run
 from azureml.data.dataset_factory import TabularDatasetFactory
+from sklearn.metrics import roc_auc_score
 
 # TODO: Create TabularDataset using TabularDatasetFactory
 # Data is located at:
 # "https://automlsamplenotebookdata.blob.core.windows.net/automl-sample-notebook-data/bankmarketing_train.csv"
 
-ds = ### YOUR CODE HERE ###
+seed = 123 #for random seed
+path = "https://automlsamplenotebookdata.blob.core.windows.net/automl-sample-notebook-data/bankmarketing_train.csv"
+ds = TabularDatasetFactory.from_delimited_files(path)
 
-x, y = clean_data(ds)
 
-# TODO: Split data into train and test sets.
-
-### YOUR CODE HERE ###a
+#Save model for current iteration
 
 run = Run.get_context()
 
@@ -30,7 +31,11 @@ def clean_data(data):
     weekdays = {"mon":1, "tue":2, "wed":3, "thu":4, "fri":5, "sat":6, "sun":7}
 
     # Clean and one hot encode data
-    x_df = data.to_pandas_dataframe().dropna()
+    x_df = (data
+                .to_pandas_dataframe() #converting dataset object to dataframe
+                .dropna() # dropping columns with NA
+                .drop(['duration'], axis=1)#dropping the column 'duration'. data description shows that it is leaking information
+           ) 
     jobs = pd.get_dummies(x_df.job, prefix="job")
     x_df.drop("job", inplace=True, axis=1)
     x_df = x_df.join(jobs)
@@ -49,7 +54,20 @@ def clean_data(data):
     x_df["poutcome"] = x_df.poutcome.apply(lambda s: 1 if s == "success" else 0)
 
     y_df = x_df.pop("y").apply(lambda s: 1 if s == "yes" else 0)
+
+    return x_df, y_df
     
+x_df, y_df = clean_data(ds)
+
+# TODO: Split data into train and test sets. Shuffled the data, stratified it
+
+x_train, x_test, y_train, y_test = (
+                             train_test_split(x_df, y_df, 
+                             test_size=0.2, 
+                             random_state=seed,
+                             shuffle = True, #shuffling the data
+                             stratify = y_df) #stratify to make sure test has same % as train
+                                    )
 
 def main():
     # Add arguments to script
@@ -63,10 +81,16 @@ def main():
     run.log("Regularization Strength:", np.float(args.C))
     run.log("Max iterations:", np.int(args.max_iter))
 
-    model = LogisticRegression(C=args.C, max_iter=args.max_iter).fit(x_train, y_train)
+    model = LogisticRegression(C=args.C, max_iter=args.max_iter, random_state=seed).fit(x_train, y_train)
 
-    accuracy = model.score(x_test, y_test)
-    run.log("Accuracy", np.float(accuracy))
+    #As the data is imbalanced, need to use AUC rather than 'Accuracy'
+    pred_prob = model.predict_proba(x_test)
+    auc_score= roc_auc_score(y_test,pred_prob[:,1])
+    run.log("AUC", np.float(auc_score))
+
+    #Save model for current iteration, also include the value for C and max_iter in filename, random_state=
+    os.makedirs('outputs', exist_ok=True)
+    joblib.dump(model, 'outputs/hyperDrive_{}_{}'.format(args.C,args.max_iter))
 
 if __name__ == '__main__':
     main()
