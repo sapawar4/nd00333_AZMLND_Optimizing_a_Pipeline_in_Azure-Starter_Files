@@ -21,7 +21,7 @@ path = "https://automlsamplenotebookdata.blob.core.windows.net/automl-sample-not
 ds = TabularDatasetFactory.from_delimited_files(path)
 
 
-#Save model for current iteration
+
 
 run = Run.get_context()
 
@@ -33,9 +33,11 @@ def clean_data(data):
     # Clean and one hot encode data
     x_df = (data
                 .to_pandas_dataframe() #converting dataset object to dataframe
-                .dropna() # dropping columns with NA
+                .dropna()              # dropping columns with NA
+                .drop_duplicates()     # dropping duplicate rows
                 .drop(['duration'], axis=1)#dropping the column 'duration'. data description shows that it is leaking information
            ) 
+    
     jobs = pd.get_dummies(x_df.job, prefix="job")
     x_df.drop("job", inplace=True, axis=1)
     x_df = x_df.join(jobs)
@@ -59,7 +61,7 @@ def clean_data(data):
     
 x_df, y_df = clean_data(ds)
 
-# TODO: Split data into train and test sets. Shuffled the data, stratified it
+# Shuffled the data, stratified and split into train and test
 
 x_train, x_test, y_train, y_test = (
                              train_test_split(x_df, y_df, 
@@ -70,27 +72,30 @@ x_train, x_test, y_train, y_test = (
                                     )
 
 def main():
-    # Add arguments to script
+    
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--C', type=float, default=1.0, help="Inverse of regularization strength. Smaller values cause stronger regularization")
-    parser.add_argument('--max_iter', type=int, default=100, help="Maximum number of iterations to converge")
+    parser.add_argument('--C', type=float, default=1.0, help="Regularization")
+    parser.add_argument('--solver', type=str, default="lbfgs", help="Solver")
+    parser.add_argument('--reg', type=str, default=None, help="Penalty")
+    
 
     args = parser.parse_args()
 
     run.log("Regularization Strength:", np.float(args.C))
-    run.log("Max iterations:", np.int(args.max_iter))
+    run.log("Solver:", str(args.solver))
+    run.log("Regularization:", str(args.reg))
 
-    model = LogisticRegression(C=args.C, max_iter=args.max_iter, random_state=seed).fit(x_train, y_train)
+    model = LogisticRegression(C=args.C, solver = args.solver, random_state=seed, penalty= args.reg).fit(x_train, y_train)
 
     #As the data is imbalanced, need to use AUC rather than 'Accuracy'
     pred_prob = model.predict_proba(x_test)
     auc_score= roc_auc_score(y_test,pred_prob[:,1])
     run.log("AUC", np.float(auc_score))
 
-    #Save model for current iteration, also include the value for C and max_iter in filename, random_state=
+    #Serialize the model
     os.makedirs('outputs', exist_ok=True)
-    joblib.dump(model, 'outputs/hyperDrive_{}_{}'.format(args.C,args.max_iter))
+    joblib.dump(model, 'outputs/hyperDrive_{}_{}'.format(args.C,args.solver, args.reg))
 
 if __name__ == '__main__':
     main()
