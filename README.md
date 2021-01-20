@@ -5,7 +5,7 @@ This project is part of the Udacity Azure ML Nanodegree. In this project, we bui
 This model is then compared to an Azure AutoML run.
 
 ## Summary
-This dataset is from a banking institution about their campaign to enroll new customers. It has features that are related to the customer (age, marital status, job etc.), macroeconomic conditions at the time pf the campaign (bond rate, employment rate etc.) and some features related to the campaign (previous campaign, mode of contact etc.). The goal of the project is to predict if a customer will enroll in bank's offering, given the historical data. 
+This dataset is from a banking institution about their campaign to enroll new customers. It has features that are related to the customer (age, marital status, job etc.), macroeconomic conditions at the time pf the campaign (bond rate, employment rate etc.) and some features related to the campaign (previous campaign, mode of contact etc.). There are 32,941 observations in the dataset. The goal of the project is to predict if a customer will enroll in bank's offering, given the historical data. 
 
 The most accurate model was a Voting Ensemble model that combines multiple classifiers. This model has accuracy of nearly 80%. 
  
