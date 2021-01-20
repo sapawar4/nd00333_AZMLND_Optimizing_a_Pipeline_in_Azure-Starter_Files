@@ -7,7 +7,10 @@ This model is then compared to an Azure AutoML run.
 ## Summary
 This dataset is from a banking institution about their campaign to enroll new customers. It has features that are related to the customer (age, marital status, job etc.), macroeconomic conditions at the time pf the campaign (bond rate, employment rate etc.) and some features related to the campaign (previous campaign, mode of contact etc.). There are 32,941 observations in the dataset. The goal of the project is to predict if a customer will enroll in bank's offering, given the historical data. 
 
-The most accurate model was a Voting Ensemble model that combines multiple classifiers. This model has accuracy of nearly 80%. 
+The most accurate model was a Soft Voting Ensemble model that combines multiple classifiers. A soft voting ensemble model makes predictions by calculating weighted average of the predictions by the multiple models in the ensemble. Such models are easier to understand, interpret and debug as the predictions are just weighted average. For more information about voting ensemble, refer to [this](http://rasbt.github.io/mlxtend/user_guide/classifier/EnsembleVoteClassifier/)  This model has accuracy of nearly 80%. 
+
+![Voting Ensemble](http://rasbt.github.io/mlxtend/user_guide/classifier/EnsembleVoteClassifier_files/majority_voting.png)
+Reference: http://rasbt.github.io/mlxtend/user_guide/classifier/EnsembleVoteClassifier/
  
 ## Scikit-learn Pipeline
 In the first approach, a Logistic Regression model was used. In a machine learning process, it is important to create a baseline model, typically starting with linear model, to establish baseline performance. We always we want to make sure we deploy the most accurate parsimonious model. 
@@ -39,6 +42,18 @@ The best performing model was a voting ensemble of 6 different models.  The AUC 
 |SGD  + minmiaxscaler| 0.07% |
 |lightgbm  + standard scaler| 0.21% |
 |SGD  + standard scaler| 0.07% |
+
+The parameters of the final AutoML model soft (voting ensemble) were:
+|Parameter| Value |
+|--|--|
+|min_samples_leaf  |0.01  |
+|min_impurity_split| None |
+|min_samples_split| 0.01 |
+|min_weight_fraction_leaf| 0 |
+|n_estimators| 25 |
+|oob_score| True |
+
+
 
 ## Pipeline comparison
 Logistic Regression is a linear model which means the classification boundary between the label classes would be linear. In this dataset if the boundary is non linear, logistic regression will not be able to capture that. Logistic Regression produced the best model with AUC = ~77% while AutoML with an ensemble of 6 different models produced AUC ~80%. Though the difference between the two models is not significant, an ensemble model is typically less prone to overfit. Thus, we will choose the AutoML model.  
